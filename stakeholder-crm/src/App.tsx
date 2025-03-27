@@ -9,6 +9,7 @@ import Companies from './pages/Companies';
 import Individuals from './pages/Individuals';
 import Conversations from './pages/Conversations';
 import Search from './pages/Search';
+import AuthCallback from './components/auth/AuthCallback';
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
               <Search />
             </Layout>
           } />
+          <Route path="/auth/callback" element={<AuthCallback />} />
         </Routes>
       </Router>
     </AuthProvider>
