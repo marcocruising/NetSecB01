@@ -6,10 +6,13 @@ import Signup from './components/auth/Signup';
 import ResetPassword from './components/auth/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Companies from './pages/Companies';
+import CompanyForm from './components/companies/CompanyForm';
 import Individuals from './pages/Individuals';
+import IndividualForm from './components/individuals/IndividualForm';
 import Conversations from './pages/Conversations';
 import Search from './pages/Search';
 import AuthCallback from './components/auth/AuthCallback';
+import ConversationForm from './components/conversations/ConversationForm';
 
 function App() {
   return (
@@ -20,6 +23,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           
           {/* Protected routes */}
           <Route path="/" element={
@@ -32,9 +36,29 @@ function App() {
               <Companies />
             </Layout>
           } />
+          <Route path="/companies/new" element={
+            <Layout>
+              <CompanyForm />
+            </Layout>
+          } />
+          <Route path="/companies/:id/edit" element={
+            <Layout>
+              <CompanyForm />
+            </Layout>
+          } />
           <Route path="/individuals" element={
             <Layout>
               <Individuals />
+            </Layout>
+          } />
+          <Route path="/individuals/new" element={
+            <Layout>
+              <IndividualForm />
+            </Layout>
+          } />
+          <Route path="/individuals/:id/edit" element={
+            <Layout>
+              <IndividualForm />
             </Layout>
           } />
           <Route path="/conversations" element={
@@ -42,12 +66,21 @@ function App() {
               <Conversations />
             </Layout>
           } />
+          <Route path="/conversations/new" element={
+            <Layout>
+              <ConversationForm />
+            </Layout>
+          } />
+          <Route path="/conversations/:id/edit" element={
+            <Layout>
+              <ConversationForm />
+            </Layout>
+          } />
           <Route path="/search" element={
             <Layout>
               <Search />
             </Layout>
           } />
-          <Route path="/auth/callback" element={<AuthCallback />} />
         </Routes>
       </Router>
     </AuthProvider>

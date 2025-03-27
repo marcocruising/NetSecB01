@@ -1,41 +1,33 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Conversation } from '../types';
+import { format } from 'date-fns';
 
 export default function Conversations() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchParams] = useSearchParams();
-  const filterParam = searchParams.get('filter');
 
   useEffect(() => {
     async function fetchConversations() {
       setLoading(true);
       try {
-        let query = supabase
+        const { data, error } = await supabase
           .from('conversations')
           .select(`
             *,
             company:companies(id, name),
-            individuals:conversation_individuals(individual:individuals(id, first_name, last_name))
+            conversation_individuals(
+              individual:individuals(id, first_name, last_name)
+            )
           `)
           .order('date', { ascending: false });
-
-        // Apply filter if present
-        if (filterParam === 'follow-up') {
-          const today = new Date().toISOString().split('T')[0];
-          query = query
-            .eq('follow_up_required', true)
-            .gte('follow_up_date', today);
-        }
-
-        const { data, error } = await query;
 
         if (error) {
           throw error;
         }
 
+        console.log("Fetched conversations:", data);
         setConversations(data || []);
       } catch (error) {
         console.error('Error fetching conversations:', error);
@@ -45,108 +37,96 @@ export default function Conversations() {
     }
 
     fetchConversations();
-  }, [filterParam]);
-
-  // Format date to a more readable format
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
+  }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          {filterParam === 'follow-up' ? 'Follow-ups' : 'Conversations'}
-        </h1>
-        <Link
-          to="/conversations/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          Add Conversation
-        </Link>
-      </div>
-
-      {loading ? (
-        <div className="space-y-4">
-          {[...Array(3)].map((_, index) => (
-            <div key={index} className="bg-white shadow overflow-hidden sm:rounded-md">
-              <div className="px-4 py-5 sm:px-6">
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="mt-2 h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          ))}
+    <div className="py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900">Conversations</h1>
+          <Link
+            to="/conversations/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Add Conversation
+          </Link>
         </div>
-      ) : conversations.length > 0 ? (
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <ul className="divide-y divide-gray-200">
-            {conversations.map((conversation) => (
-              <li key={conversation.id}>
-                <Link to={`/conversations/${conversation.id}`} className="block hover:bg-gray-50">
+        
+        {loading ? (
+          <div className="mt-6 flex justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+          </div>
+        ) : conversations.length === 0 ? (
+          <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-md p-6 text-center text-gray-500">
+            No conversations found. Add your first conversation to get started.
+          </div>
+        ) : (
+          <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-md">
+            <ul className="divide-y divide-gray-200">
+              {conversations.map((conversation) => (
+                <li key={conversation.id}>
                   <div className="px-4 py-4 sm:px-6">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium text-indigo-600">
-                        {conversation.company?.name ? (
-                          <span>{conversation.company.name}</span>
-                        ) : conversation.individuals && conversation.individuals.length > 0 ? (
-                          <span>
-                            {conversation.individuals.map(i => 
-                              `${i.individual.first_name} ${i.individual.last_name}`
-                            ).join(', ')}
-                          </span>
-                        ) : (
-                          <span>Conversation</span>
-                        )}
-                      </div>
+                      <p className="text-sm font-medium text-indigo-600 truncate">
+                        {format(new Date(conversation.date), 'MMMM d, yyyy')}
+                      </p>
                       <div className="ml-2 flex-shrink-0 flex">
-                        <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                          {formatDate(conversation.date)}
-                        </p>
                         {conversation.follow_up_required && (
-                          <p className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Follow-up
+                          <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Follow-up: {conversation.follow_up_date ? format(new Date(conversation.follow_up_date), 'MMM d, yyyy') : 'Required'}
                           </p>
                         )}
                       </div>
                     </div>
-                    <div className="mt-2 text-sm text-gray-500">
-                      <p className="truncate">{conversation.notes}</p>
+                    
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {conversation.notes}
+                      </p>
+                    </div>
+                    
+                    <div className="mt-2 sm:flex sm:justify-between">
+                      <div className="sm:flex">
+                        {conversation.company && (
+                          <p className="flex items-center text-sm text-gray-500">
+                            <span className="font-medium text-gray-700">Company:</span>
+                            <span className="ml-1">{conversation.company.name}</span>
+                          </p>
+                        )}
+                      </div>
+                      
+                      {conversation.conversation_individuals && conversation.conversation_individuals.length > 0 && (
+                        <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                          <span className="font-medium text-gray-700">Individuals:</span>
+                          <span className="ml-1">
+                            {conversation.conversation_individuals.map(
+                              (item, index) => (
+                                <span key={item.individual.id}>
+                                  {index > 0 ? ', ' : ''}
+                                  {item.individual.first_name} {item.individual.last_name}
+                                </span>
+                              )
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-2 flex justify-end">
+                      <Link
+                        to={`/conversations/${conversation.id}/edit`}
+                        className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                      >
+                        Edit
+                      </Link>
                     </div>
                   </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <div className="text-center py-12 bg-white shadow overflow-hidden sm:rounded-md">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No conversations</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by recording a new conversation.</p>
-          <div className="mt-6">
-            <Link
-              to="/conversations/new"
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Add Conversation
-            </Link>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 } 

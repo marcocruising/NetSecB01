@@ -32,7 +32,7 @@ export default function Search() {
         .from('companies')
         .select('*')
         .or(`name.ilike.%${query}%, industry.ilike.%${query}%, description.ilike.%${query}%`)
-        .limit(10);
+        .order('name', { ascending: true });
 
       if (companiesError) throw companiesError;
 
@@ -44,7 +44,7 @@ export default function Search() {
           company:companies(id, name)
         `)
         .or(`first_name.ilike.%${query}%, last_name.ilike.%${query}%, email.ilike.%${query}%, role.ilike.%${query}%, description.ilike.%${query}%`)
-        .limit(10);
+        .order('last_name', { ascending: true });
 
       if (individualsError) throw individualsError;
 
@@ -53,11 +53,10 @@ export default function Search() {
         .from('conversations')
         .select(`
           *,
-          company:companies(id, name),
-          individuals:conversation_individuals(individual:individuals(id, first_name, last_name))
+          company:companies(id, name)
         `)
         .ilike('notes', `%${query}%`)
-        .limit(10);
+        .order('date', { ascending: false });
 
       if (conversationsError) throw conversationsError;
 
@@ -67,7 +66,7 @@ export default function Search() {
         conversations: conversations || []
       });
     } catch (error) {
-      console.error('Error performing search:', error);
+      console.error('Error searching:', error);
     } finally {
       setLoading(false);
     }
@@ -84,197 +83,140 @@ export default function Search() {
                      results.conversations.length > 0;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Search</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Search for companies, individuals, or conversations.
-        </p>
-      </div>
-
-      <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
-        <form onSubmit={handleSearch}>
-          <div className="flex">
-            <div className="flex-grow">
-              <input
-                type="text"
-                className="focus:ring-indigo-500 focus:border-indigo-500 block w-full rounded-md sm:text-sm border-gray-300"
-                placeholder="Search by name, email, content..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-            <div className="ml-3">
-              <button
-                type="submit"
-                disabled={loading || !query.trim()}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-              >
-                {loading ? 'Searching...' : 'Search'}
-              </button>
-            </div>
+    <div className="py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 className="text-3xl font-bold text-gray-900">Search</h1>
+        
+        <form onSubmit={handleSearch} className="mt-6">
+          <div className="flex rounded-md shadow-sm">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search for companies, individuals, or conversations..."
+              className="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-l-md sm:text-sm border-gray-300"
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-r-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Search
+            </button>
           </div>
         </form>
-      </div>
-
-      {loading ? (
-        <div className="space-y-4">
-          {[...Array(3)].map((_, index) => (
-            <div key={index} className="bg-white shadow overflow-hidden sm:rounded-md">
-              <div className="px-4 py-5 sm:px-6">
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="mt-2 h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : searched && !hasResults ? (
-        <div className="text-center py-12 bg-white shadow overflow-hidden sm:rounded-md">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No results found</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Try adjusting your search terms or creating new entries.
-          </p>
-        </div>
-      ) : (
-        searched && (
-          <div className="space-y-6">
-            {/* Companies Results */}
-            {results.companies.length > 0 && (
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-3">Companies</h2>
-                <div className="bg-white shadow overflow-hidden sm:rounded-md">
-                  <ul className="divide-y divide-gray-200">
-                    {results.companies.map((company) => (
-                      <li key={company.id}>
-                        <Link to={`/companies/${company.id}`} className="block hover:bg-gray-50">
-                          <div className="px-4 py-4 sm:px-6">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium text-indigo-600 truncate">{company.name}</p>
-                              {company.type && (
-                                <div className="ml-2 flex-shrink-0 flex">
-                                  <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    {company.type}
+        
+        {loading ? (
+          <div className="mt-6 flex justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+          </div>
+        ) : searched && (
+          <div className="mt-6">
+            {results.companies.length === 0 && results.individuals.length === 0 && results.conversations.length === 0 ? (
+              <p className="text-gray-500">No results found for "{query}".</p>
+            ) : (
+              <>
+                {/* Companies */}
+                {results.companies.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">Companies</h2>
+                    <div className="bg-white shadow overflow-hidden sm:rounded-md">
+                      <ul className="divide-y divide-gray-200">
+                        {results.companies.map((company) => (
+                          <li key={company.id}>
+                            <Link to={`/companies/${company.id}/edit`} className="block hover:bg-gray-50">
+                              <div className="px-4 py-4 sm:px-6">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-medium text-indigo-600 truncate">
+                                    {company.name}
+                                  </p>
+                                  {company.industry && (
+                                    <div className="ml-2 flex-shrink-0 flex">
+                                      <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                        {company.industry}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Individuals */}
+                {results.individuals.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">Individuals</h2>
+                    <div className="bg-white shadow overflow-hidden sm:rounded-md">
+                      <ul className="divide-y divide-gray-200">
+                        {results.individuals.map((individual) => (
+                          <li key={individual.id}>
+                            <Link to={`/individuals/${individual.id}/edit`} className="block hover:bg-gray-50">
+                              <div className="px-4 py-4 sm:px-6">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-medium text-indigo-600 truncate">
+                                    {individual.first_name} {individual.last_name}
+                                  </p>
+                                  {individual.company && (
+                                    <div className="ml-2 flex-shrink-0 flex">
+                                      <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                        {individual.company.name}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="mt-2 sm:flex sm:justify-between">
+                                  <div className="sm:flex">
+                                    <p className="flex items-center text-sm text-gray-500">
+                                      {individual.role}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Conversations */}
+                {results.conversations.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">Conversations</h2>
+                    <div className="bg-white shadow overflow-hidden sm:rounded-md">
+                      <ul className="divide-y divide-gray-200">
+                        {results.conversations.map((conversation) => (
+                          <li key={conversation.id}>
+                            <Link to={`/conversations/${conversation.id}/edit`} className="block hover:bg-gray-50">
+                              <div className="px-4 py-4 sm:px-6">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-medium text-indigo-600 truncate">
+                                    {new Date(conversation.date).toLocaleDateString()}
                                   </p>
                                 </div>
-                              )}
-                            </div>
-                            <div className="mt-2 sm:flex sm:justify-between">
-                              <div className="sm:flex">
-                                <p className="flex items-center text-sm text-gray-500">
-                                  {company.industry || 'No industry specified'}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {/* Individuals Results */}
-            {results.individuals.length > 0 && (
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-3">Individuals</h2>
-                <div className="bg-white shadow overflow-hidden sm:rounded-md">
-                  <ul className="divide-y divide-gray-200">
-                    {results.individuals.map((individual) => (
-                      <li key={individual.id}>
-                        <Link to={`/individuals/${individual.id}`} className="block hover:bg-gray-50">
-                          <div className="px-4 py-4 sm:px-6">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium text-indigo-600 truncate">
-                                {individual.first_name} {individual.last_name}
-                              </p>
-                              {individual.contact_type && (
-                                <div className="ml-2 flex-shrink-0 flex">
-                                  <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    {individual.contact_type}
+                                <div className="mt-2">
+                                  <p className="text-sm text-gray-600 line-clamp-2">
+                                    {conversation.notes}
                                   </p>
                                 </div>
-                              )}
-                            </div>
-                            <div className="mt-2 sm:flex sm:justify-between">
-                              <div className="sm:flex">
-                                <p className="flex items-center text-sm text-gray-500">
-                                  {individual.role || 'No role specified'}
-                                </p>
                               </div>
-                              <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                                <p>
-                                  {individual.company?.name || 'No company'}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {/* Conversations Results */}
-            {results.conversations.length > 0 && (
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-3">Conversations</h2>
-                <div className="bg-white shadow overflow-hidden sm:rounded-md">
-                  <ul className="divide-y divide-gray-200">
-                    {results.conversations.map((conversation) => (
-                      <li key={conversation.id}>
-                        <Link to={`/conversations/${conversation.id}`} className="block hover:bg-gray-50">
-                          <div className="px-4 py-4 sm:px-6">
-                            <div className="flex items-center justify-between">
-                              <div className="text-sm font-medium text-indigo-600">
-                                {conversation.company?.name ? (
-                                  <span>{conversation.company.name}</span>
-                                ) : conversation.individuals && conversation.individuals.length > 0 ? (
-                                  <span>
-                                    {conversation.individuals.map(i => 
-                                      `${i.individual.first_name} ${i.individual.last_name}`
-                                    ).join(', ')}
-                                  </span>
-                                ) : (
-                                  <span>Conversation</span>
-                                )}
-                              </div>
-                              <div className="ml-2 flex-shrink-0 flex">
-                                <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                  {formatDate(conversation.date)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="mt-2 text-sm text-gray-500">
-                              <p className="truncate">{conversation.notes}</p>
-                            </div>
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
-        )
-      )}
+        )}
+      </div>
     </div>
   );
 } 

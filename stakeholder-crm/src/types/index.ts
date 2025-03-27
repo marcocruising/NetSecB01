@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'user' | 'admin';
 
 export interface User {
   id: string;
@@ -14,14 +14,10 @@ export type CompanyType = 'Investor' | 'Customer' | 'Partner' | 'Vendor' | 'Othe
 export interface Company {
   id: string;
   name: string;
-  website?: string;
-  industry?: string;
-  size?: CompanySize;
-  type?: CompanyType;
-  description?: string;
+  industry: string;
+  website: string;
+  description: string;
   created_at: string;
-  updated_at: string;
-  tags?: Tag[];
 }
 
 export type ContactType = 'Investor' | 'Customer' | 'Potential Employee' | 'Partner' | 'Other';
@@ -30,32 +26,39 @@ export interface Individual {
   id: string;
   first_name: string;
   last_name: string;
-  email?: string;
-  phone?: string;
-  company_id?: string;
-  company?: Company;
-  role?: string;
-  contact_type?: ContactType;
-  description?: string;
+  email: string;
+  phone: string;
+  role: string;
+  company_id: string | null;
+  description: string;
   created_at: string;
-  updated_at: string;
-  tags?: Tag[];
+  company?: Company;
 }
 
 export interface Conversation {
   id: string;
   date: string;
-  company_id?: string;
-  company?: Company;
-  individuals?: Individual[];
   notes: string;
   follow_up_required: boolean;
-  follow_up_date?: string;
-  created_by: string;
-  participants: User[];
+  follow_up_date: string | null;
+  company_id: string | null;
+  company?: Company;
+  conversation_individuals?: ConversationIndividual[];
   created_at: string;
-  updated_at: string;
-  tags?: Tag[];
+}
+
+export interface ConversationIndividual {
+  id: string;
+  conversation_id: string;
+  individual_id: string;
+  individual: Individual;
+  created_at: string;
+}
+
+export interface SearchResult {
+  companies: Company[];
+  individuals: Individual[];
+  conversations: Conversation[];
 }
 
 export type TagCategory = 'Company' | 'Individual' | 'Conversation' | 'All';
